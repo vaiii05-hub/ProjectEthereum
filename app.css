@@ -1,0 +1,166 @@
+/* Reset */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Poppins', sans-serif;
+}
+/* Full-screen background */
+body {
+height: 100vh;
+width: 100vw;
+background: linear-gradient(135deg, #e561aa0%,#6b8cff 100%);
+display: flex;
+align-items: center;
+justify-content: center;
+}
+/* Mainapp container */
+.app-container {
+width: 100%;
+height: 100%;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 30px;
+color: #fff;
+overflow-y: auto;
+}
+/* Title */
+h1 {
+font-size: 2.5rem;
+font-weight: 700;
+margin-bottom: 20px;
+display: flex;
+align-items: center;
+gap: 10px;
+text-align: center;
+}
+/* Connect Wallet button */
+.connect-btn {
+background-color: #1e8a25;
+color: white;
+border: none;
+padding: 12px30px;
+border-radius: 10px;
+font-size: 1rem;
+font-weight: 600;
+cursor: pointer;
+transition: 0.3s ease;
+margin-bottom: 25px;
+}
+.connect-btn:hover {
+background-color: #3269c7;
+}
+/* Guidelines Box*/
+.guidelines {
+background-color: rgba(255, 255, 255,0.15);
+border-radius: 12px;
+padding: 25px;
+width: 85%;
+max-width: 800px;
+text-align: left;
+box-shadow: 0 4px12pxrgba(0,0, 0, 0.2);
+margin-bottom: 40px;
+}
+.guidelines h2 {
+text-align: center;
+margin-bottom: 15px;
+font-size: 1.4rem;
+}
+.guidelines ol {
+margin-left: 25px;
+line-height: 1.8;
+font-size: 1rem;
+}
+/* Details container */
+.details-container {
+display: flex;
+flex-wrap: wrap;
+gap: 30px;
+justify-content: center;
+margin-bottom: 40px;
+}
+/* Each card */
+.detail-box {
+background-color: rgba(255, 255, 255,0.15);
+border-radius: 12px;
+padding: 25px;
+width: 320px;
+box-shadow: 0 4px12pxrgba(0,0, 0, 0.15);
+transition: transform 0.3s ease;
+}
+.detail-box:hover {
+transform: translateY(-4px);
+}
+/* Card headings */
+.detail-box h3 {
+text-align: center;
+margin-bottom: 20px;
+color: #fff;
+}
+/* Input fields*/
+input {
+width: 100%;
+padding: 10px12px;
+margin-bottom: 15px;
+border-radius: 8px;
+border: none;
+background-color: #f2f2f2;
+color: #333;
+font-size: 1rem;
+outline: none;
+}
+input:focus {
+border: 2px solid #e561aa;
+}
+/* Verify button */
+.verify-btn {
+background-color: #1e8a25;
+color: white;
+border: none;
+padding: 12px25px;
+border-radius: 10px;
+font-size: 1.1rem;
+cursor: pointer;
+transition: 0.3s ease;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 8px;
+}
+.verify-btn:hover {
+background-color: #3269c7;
+}
+/* Action Buttons Container */
+.action-buttons {
+display: flex;
+gap: 20px;
+justify-content: center;
+}
+/* Register buttonstyle */
+.register-btn {
+background-color: #ffb300;
+color: #222;
+border: none;
+padding: 12px25px;
+border-radius: 10px;
+font-size: 1.1rem;
+cursor: pointer;
+font-weight: 600;
+transition: 0.3s ease;
+}
+.register-btn:hover {
+background-color: #ff9f00;
+}
+/* Responsive */
+@media(max-width: 768px) {
+h1{
+font-size: 2rem;
+}
+.detail-box {
+width: 90%;
+}
+.guidelines {
+width: 95%;
+}
+}
