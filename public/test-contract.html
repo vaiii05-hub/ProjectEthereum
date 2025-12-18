@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Contract Test</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 8px; }
+        button { padding: 8px 12px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        input { width: 200px; padding: 6px; margin: 3px; border: 1px solid #ccc; border-radius: 4px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Smart Contract Test Interface</h1>
+    
+    <div class="test-section">
+        <h3>Contract Info</h3>
+        <p><strong>Address:</strong> 0xc089e064FbA6756f1179E11a75352FE0EaE2aC34</p>
+        <p><strong>Network:</strong> Sepolia Testnet</p>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connection-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Register Vehicle</h3>
+        <input type="text" id="testBuyerName" placeholder="Buyer Name" value="Test Buyer">
+        <input type="text" id="testBuyerId" placeholder="Buyer ID" value="TEST123">
+        <input type="text" id="testOwnerName" placeholder="Owner Name" value="Test Owner">
+        <input type="text" id="testVehicleNumber" placeholder="Vehicle Number" value="TEST001">
+        <button onclick="testRegister()">Register</button>
+        <div id="register-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Verify Vehicle</h3>
+        <input type="text" id="testVerifyNumber" placeholder="Vehicle Number" value="TEST001">
+        <button onclick="testVerify()">Verify</button>
+        <div id="verify-result"></div>
+    </div>
+
+    <script>
+        const CONTRACT_ADDRESS = "0xc089e064FbA6756f1179E11a75352FE0EaE2aC34";
+        const CONTRACT_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "string", "name": "_buyerName", "type": "string"},
+                    {"internalType": "string", "name": "_buyerId", "type": "string"},
+                    {"internalType": "string", "name": "_ownerName", "type": "string"},
+                    {"internalType": "string", "name": "_vehicleNumber", "type": "string"}
+                ],
+                "name": "registerVehicle",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [{"internalType": "string", "name": "_vehicleNumber", "type": "string"}],
+                "name": "verifyVehicle",
+                "outputs": [
+                    {"internalType": "string", "name": "buyerName", "type": "string"},
+                    {"internalType": "string", "name": "buyerId", "type": "string"},
+                    {"internalType": "string", "name": "ownerName", "type": "string"},
+                    {"internalType": "string", "name": "vehicleNumber", "type": "string"},
+                    {"internalType": "address", "name": "registeredBy", "type": "address"},
+                    {"internalType": "uint8", "name": "vehicleStatus", "type": "uint8"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        let provider, signer, contract;
+
+        async function testConnection() {
+            try {
+                if (!window.ethereum) {
+                    document.getElementById('connection-result').innerHTML = 
+                        '<div class="result" style="color: red;">MetaMask not found!</div>';
+                    return;
+                }
+
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                
+                const network = await provider.getNetwork();
+                const address = await signer.getAddress();
+                
+                document.getElementById('connection-result').innerHTML = 
+                    `<div class="result" style="color: green;">
+                        ✅ Connected!<br>
+                        Address: ${address}<br>
+                        Network: ${network.name} (${network.chainId})
+                    </div>`;
+                    
+            } catch (error) {
+                document.getElementById('connection-result').innerHTML = 
+                    `<div class="result" style="color: red;">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testRegister() {
+            const buyerName = document.getElementById('testBuyerName').value;
+            const buyerId = document.getElementById('testBuyerId').value;
+            const ownerName = document.getElementById('testOwnerName').value;
+            const vehicleNumber = document.getElementById('testVehicleNumber').value;
+
+            try {
+                if (!signer) {
+                    await testConnection();
+                }
+
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                document.getElementById('register-result').innerHTML = 
+                    '<div class="result">🔄 Registering... Please confirm in MetaMask</div>';
+
+                const tx = await contract.registerVehicle(buyerName, buyerId, ownerName, vehicleNumber);
+                
+                document.getElementById('register-result').innerHTML = 
+                    '<div class="result">⏳ Transaction sent... Waiting for confirmation</div>';
+
+                const receipt = await tx.wait();
+                
+                document.getElementById('register-result').innerHTML = 
+                    `<div class="result" style="color: green;">
+                        ✅ Registration Success!<br>
+                        TX Hash: ${receipt.transactionHash}<br>
+                        Block: ${receipt.blockNumber}
+                    </div>`;
+
+            } catch (error) {
+                document.getElementById('register-result').innerHTML = 
+                    `<div class="result" style="color: red;">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testVerify() {
+            const vehicleNumber = document.getElementById('testVerifyNumber').value;
+
+            try {
+                if (!provider) {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                }
+
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+                
+                const result = await contract.verifyVehicle(vehicleNumber);
+                
+                if (result[0] === "") {
+                    document.getElementById('verify-result').innerHTML = 
+                        '<div class="result" style="color: orange;">⚠️ Vehicle not found</div>';
+                } else {
+                    document.getElementById('verify-result').innerHTML = 
+                        `<div class="result" style="color: green;">
+                            ✅ Vehicle Found!<br>
+                            Buyer: ${result[0]}<br>
+                            Buyer ID: ${result[1]}<br>
+                            Owner: ${result[2]}<br>
+                            Vehicle: ${result[3]}<br>
+                            Registered By: ${result[4]}<br>
+                            Status: ${result[5] === 0 ? 'Active' : 'Unknown'}
+                        </div>`;
+                }
+
+            } catch (error) {
+                document.getElementById('verify-result').innerHTML = 
+                    `<div class="result" style="color: red;">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

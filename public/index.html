@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicle Verification System</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script src="contract.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { border: 1px solid #ddd; margin: 20px 0; padding: 20px; border-radius: 8px; }
+        input { width: 200px; padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { margin-top: 15px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🚗 Vehicle Verification System</h1>
+    
+    <div class="section" id="wallet-section">
+        <h3>🔗 Wallet Connection</h3>
+        <button onclick="connectWallet()" id="connectBtn">Connect MetaMask</button>
+        <div id="wallet-status"></div>
+    </div>
+    
+    <div class="section" id="vehicle-form">
+        <h3>📝 Add Vehicle to Database</h3>
+        <input type="text" id="vehicleNumber" placeholder="Vehicle Number (e.g., MH12AB1234)">
+        <input type="text" id="ownerName" placeholder="Owner Name">
+        <button onclick="addVehicle()" id="addVehicleBtn">Add Vehicle</button>
+        <div id="vehicle-result"></div>
+    </div>
+
+    <div class="section" id="rto-section">
+        <h3>🏦 RTO Verification</h3>
+        <input type="text" id="rtoVehicleNumber" placeholder="Vehicle Number (e.g., MH12AB1234)">
+        <button onclick="verifyRTO()">Verify with RTO</button>
+        <button onclick="fillSampleRTO()" style="background: #6c757d;">Sample Data</button>
+        <p style="font-size: 12px; color: #666;">Available test vehicles: MH12AB1234, DL01CA9999, KA03HB5678, TEST001</p>
+        <div id="rto-result"></div>
+    </div>
+
+    <div class="section" id="blockchain-section">
+        <h3>⛓️ Blockchain Operations</h3>
+        <h4>Register Vehicle on Blockchain:</h4>
+        <input type="text" id="buyerName" placeholder="Buyer Name">
+        <input type="text" id="buyerId" placeholder="Buyer ID/Aadhar">
+        <input type="text" id="blockchainOwnerName" placeholder="Owner Name">
+        <input type="text" id="blockchainVehicleNumber" placeholder="Vehicle Number">
+        <button onclick="registerOnBlockchain()" id="registerBtn">Register on Blockchain</button>
+        
+        <h4>Verify Vehicle on Blockchain:</h4>
+        <input type="text" id="verifyVehicleNumber" placeholder="Vehicle Number to Verify">
+        <button onclick="verifyOnBlockchain()">Verify on Blockchain</button>
+        <div id="blockchain-result"></div>
+    </div>
+
+    <script>
+        let provider, signer, userAccount, currentNetwork;
+
+        // Check if MetaMask is installed
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                console.log('MetaMask detected!');
+                // Check if already connected
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    await connectWallet();
+                }
+            } else {
+                document.getElementById('wallet-status').innerHTML = 
+                    '<p style="color: red;">MetaMask not installed! <a href="https://metamask.io" target="_blank">Install MetaMask</a></p>';
+            }
+        });
+
+        // Listen for account changes
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    userAccount = null;
+                    document.getElementById('wallet-status').innerText = 'Wallet disconnected';
+                } else {
+                    connectWallet();
+                }
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                window.location.reload();
+            });
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('MetaMask not installed!');
+                return;
+            }
+
+            try {
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                userAccount = await signer.getAddress();
+                
+                // Get network info
+                const network = await provider.getNetwork();
+                currentNetwork = network.chainId;
+                
+                // Check if on Sepolia
+                if (currentNetwork !== 11155111) {
+                    document.getElementById('wallet-status').innerHTML = 
+                        `<p style="color: orange;">Connected: ${userAccount.substring(0,6)}...${userAccount.substring(38)}<br>
+                        ⚠️ Please switch to Sepolia Testnet</p>`;
+                } else {
+                    document.getElementById('wallet-status').innerHTML = 
+                        `<p style="color: green;">✅ Connected: ${userAccount.substring(0,6)}...${userAccount.substring(38)}<br>
+                        Network: Sepolia Testnet</p>`;
+                }
+                
+                // Get balance
+                const balance = await provider.getBalance(userAccount);
+                const ethBalance = ethers.utils.formatEther(balance);
+                document.getElementById('wallet-status').innerHTML += 
+                    `<p>Balance: ${parseFloat(ethBalance).toFixed(4)} ETH</p>`;
+                    
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                if (error.code === 4001) {
+                    alert('Please connect to MetaMask.');
+                } else {
+                    alert('Error connecting to MetaMask: ' + error.message);
+                }
+            }
+        }
+
+        async function addVehicle() {
+            const vehicleNumber = document.getElementById('vehicleNumber').value;
+            const ownerName = document.getElementById('ownerName').value;
+            
+            if (!vehicleNumber || !ownerName) {
+                document.getElementById('vehicle-result').innerHTML = 
+                    '<div class="result error">Please fill all fields</div>';
+                return;
+            }
+            
+            try {
+                document.getElementById('addVehicleBtn').disabled = true;
+                document.getElementById('addVehicleBtn').innerText = 'Adding...';
+                
+                const response = await fetch('http://localhost:5000/api/vehicles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vehicleNumber, ownerName, ownerAddress: userAccount || 'N/A' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('vehicle-result').innerHTML = 
+                        '<div class="result success">✅ Vehicle added to database successfully!</div>';
+                    // Clear form
+                    document.getElementById('vehicleNumber').value = '';
+                    document.getElementById('ownerName').value = '';
+                } else {
+                    document.getElementById('vehicle-result').innerHTML = 
+                        '<div class="result error">❌ Failed to add vehicle: ' + result.error + '</div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('vehicle-result').innerHTML = 
+                    '<div class="result error">❌ Network error: Failed to add vehicle</div>';
+            } finally {
+                document.getElementById('addVehicleBtn').disabled = false;
+                document.getElementById('addVehicleBtn').innerText = 'Add Vehicle';
+            }
+        }
+
+        async function verifyRTO() {
+            const vehicleNumber = document.getElementById('rtoVehicleNumber').value.trim();
+            
+            if (!vehicleNumber) {
+                document.getElementById('rto-result').innerHTML = 
+                    '<div class="result error">Please enter vehicle number</div>';
+                return;
+            }
+            
+            try {
+                document.getElementById('rto-result').innerHTML = 
+                    '<div class="result warning">🔄 Verifying with RTO database...</div>';
+                
+                const response = await fetch(`/api/rto/vehicle/${vehicleNumber}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const rto = result.rtoData;
+                    document.getElementById('rto-result').innerHTML = `
+                        <div class="result success">
+                            <h4>🏛️ RTO Verification Result:</h4>
+                            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                                <h5>📋 Vehicle Information:</h5>
+                                <p><strong>Vehicle Number:</strong> ${rto.vehicleNumber}</p>
+                                <p><strong>Owner Name:</strong> ${rto.ownerName}</p>
+                                <p><strong>Make & Model:</strong> ${rto.makerModel}</p>
+                                <p><strong>Registration Date:</strong> ${rto.registrationDate}</p>
+                                <p><strong>Fuel Type:</strong> ${rto.fuelType}</p>
+                                <p><strong>Registration Authority:</strong> ${rto.registrationAuthority}</p>
+                                
+                                <h5>📅 Validity Status:</h5>
+                                <p><strong>Fitness Valid Till:</strong> ${rto.fitnessUpto}</p>
+                                <p><strong>Insurance Valid Till:</strong> ${rto.insuranceUpto}</p>
+                                <p><strong>PUC Valid Till:</strong> ${rto.pucUpto}</p>
+                                <p><strong>Status:</strong> <span style="color: green; font-weight: bold;">${rto.status}</span></p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('rto-result').innerHTML = 
+                        `<div class="result error">❌ RTO Verification Failed: ${result.message || 'Vehicle not found'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('rto-result').innerHTML = 
+                    `<div class="result error">❌ Network Error: Unable to connect to RTO service</div>`;
+            }
+        }
+        
+        // Quick fill sample data
+        function fillSampleRTO() {
+            document.getElementById('rtoVehicleNumber').value = 'MH12AB1234';
+        }
+
+        async function registerOnBlockchain() {
+            const buyerName = document.getElementById('buyerName').value;
+            const buyerId = document.getElementById('buyerId').value;
+            const ownerName = document.getElementById('blockchainOwnerName').value;
+            const vehicleNumber = document.getElementById('blockchainVehicleNumber').value;
+            
+            if (!buyerName || !buyerId || !ownerName || !vehicleNumber) {
+                document.getElementById('blockchain-result').innerHTML = 
+                    '<div class="result error">Please fill all fields for registration</div>';
+                return;
+            }
+            
+            if (!userAccount) {
+                document.getElementById('blockchain-result').innerHTML = 
+                    '<div class="result error">Please connect MetaMask wallet first</div>';
+                return;
+            }
+            
+            if (currentNetwork !== 11155111) {
+                document.getElementById('blockchain-result').innerHTML = 
+                    '<div class="result warning">⚠️ Please switch to Sepolia Testnet first</div>';
+                return;
+            }
+            
+            try {
+                document.getElementById('registerBtn').disabled = true;
+                document.getElementById('registerBtn').innerText = 'Registering...';
+                document.getElementById('blockchain-result').innerHTML = 
+                    '<div class="result warning">🔄 Registering on blockchain... Please confirm transaction in MetaMask</div>';
+                
+                const result = await registerVehicleOnBlockchain(buyerName, buyerId, ownerName, vehicleNumber);
+                
+                document.getElementById('blockchain-result').innerHTML = `
+                    <div class="result success">
+                        <h4>✅ Blockchain Registration Success!</h4>
+                        <p><strong>Transaction Hash:</strong> <a href="https://sepolia.etherscan.io/tx/${result.transactionHash}" target="_blank">${result.transactionHash}</a></p>
+                        <p><strong>Block Number:</strong> ${result.blockNumber}</p>
+                        <p><strong>Network:</strong> Sepolia Testnet</p>
+                    </div>
+                `;
+                
+                // Clear form
+                document.getElementById('buyerName').value = '';
+                document.getElementById('buyerId').value = '';
+                document.getElementById('blockchainOwnerName').value = '';
+                document.getElementById('blockchainVehicleNumber').value = '';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                let errorMsg = error.message;
+                if (error.code === 4001) {
+                    errorMsg = 'Transaction rejected by user';
+                } else if (error.code === -32603) {
+                    errorMsg = 'Insufficient funds for gas';
+                }
+                document.getElementById('blockchain-result').innerHTML = 
+                    '<div class="result error">❌ Blockchain registration failed: ' + errorMsg + '</div>';
+            } finally {
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').innerText = 'Register on Blockchain';
+            }
+        }
+
+        async function verifyOnBlockchain() {
+            const vehicleNumber = document.getElementById('verifyVehicleNumber').value;
+            
+            if (!vehicleNumber) {
+                alert('Please enter vehicle number to verify');
+                return;
+            }
+            
+            try {
+                const result = await verifyVehicleOnBlockchain(vehicleNumber);
+                
+                if (result.exists) {
+                    document.getElementById('blockchain-result').innerHTML = `
+                        <h4>Blockchain Verification Result:</h4>
+                        <p><strong>Status:</strong> ✅ Verified on Blockchain</p>
+                        <p><strong>Buyer Name:</strong> ${result.buyerName}</p>
+                        <p><strong>Buyer ID:</strong> ${result.buyerId}</p>
+                        <p><strong>Owner Name:</strong> ${result.ownerName}</p>
+                        <p><strong>Vehicle Number:</strong> ${result.vehicleNumber}</p>
+                        <p><strong>Registered By:</strong> ${result.registeredBy}</p>
+                        <p><strong>Status:</strong> ${result.status}</p>
+                    `;
+                } else {
+                    document.getElementById('blockchain-result').innerHTML = '<p style="color: red;">❌ Vehicle not found on blockchain</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('blockchain-result').innerHTML = '<p style="color: red;">Error verifying on blockchain: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

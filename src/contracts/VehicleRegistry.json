@@ -1,0 +1,41 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {"internalType": "string", "name": "_buyerName", "type": "string"},
+        {"internalType": "string", "name": "_buyerId", "type": "string"},
+        {"internalType": "string", "name": "_ownerName", "type": "string"},
+        {"internalType": "string", "name": "_vehicleNumber", "type": "string"}
+      ],
+      "name": "registerVehicle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "string", "name": "_vehicleNumber", "type": "string"}],
+      "name": "verifyVehicle",
+      "outputs": [
+        {"internalType": "string", "name": "buyerName", "type": "string"},
+        {"internalType": "string", "name": "buyerId", "type": "string"},
+        {"internalType": "string", "name": "ownerName", "type": "string"},
+        {"internalType": "string", "name": "vehicleNumber", "type": "string"},
+        {"internalType": "address", "name": "registeredBy", "type": "address"},
+        {"internalType": "uint8", "name": "vehicleStatus", "type": "uint8"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": false, "internalType": "string", "name": "vehicleNumber", "type": "string"},
+        {"indexed": false, "internalType": "string", "name": "ownerName", "type": "string"},
+        {"indexed": false, "internalType": "string", "name": "buyerName", "type": "string"},
+        {"indexed": false, "internalType": "address", "name": "registeredBy", "type": "address"}
+      ],
+      "name": "VehicleRegistered",
+      "type": "event"
+    }
+  ]
+}

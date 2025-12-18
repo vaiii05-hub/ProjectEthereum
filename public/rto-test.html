@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTO API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 8px; }
+        button { padding: 8px 12px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        input { width: 250px; padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .result { margin: 10px 0; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .loading { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .vehicle-card { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .sample-vehicles { display: flex; flex-wrap: wrap; gap: 10px; }
+        .sample-btn { background: #6c757d; font-size: 12px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>🏛️ RTO API Test Interface</h1>
+    
+    <div class="test-section">
+        <h3>Test RTO Vehicle Verification</h3>
+        <input type="text" id="vehicleNumber" placeholder="Enter Vehicle Number (e.g., MH12AB1234)">
+        <button onclick="testRTOAPI()">Verify with RTO</button>
+        
+        <h4>Sample Vehicle Numbers:</h4>
+        <div class="sample-vehicles">
+            <button class="sample-btn" onclick="setVehicleNumber('MH12AB1234')">MH12AB1234</button>
+            <button class="sample-btn" onclick="setVehicleNumber('DL01CA9999')">DL01CA9999</button>
+            <button class="sample-btn" onclick="setVehicleNumber('KA03HB5678')">KA03HB5678</button>
+            <button class="sample-btn" onclick="setVehicleNumber('TEST001')">TEST001</button>
+            <button class="sample-btn" onclick="setVehicleNumber('INVALID123')">INVALID123</button>
+        </div>
+        
+        <div id="rto-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>API Endpoint Information</h3>
+        <div class="vehicle-card">
+            <h4>Available Endpoints:</h4>
+            <p><strong>GET</strong> /api/rto/vehicle/{vehicleNumber}</p>
+            <p><strong>Example:</strong> GET /api/rto/vehicle/MH12AB1234</p>
+            <p><strong>Response:</strong> JSON with vehicle details</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Direct API Test</h3>
+        <button onclick="testDirectAPI()">Test Direct API Call</button>
+        <div id="api-result"></div>
+    </div>
+
+    <script>
+        function setVehicleNumber(number) {
+            document.getElementById('vehicleNumber').value = number;
+        }
+
+        async function testRTOAPI() {
+            const vehicleNumber = document.getElementById('vehicleNumber').value.trim();
+            
+            if (!vehicleNumber) {
+                document.getElementById('rto-result').innerHTML = 
+                    '<div class="result error">❌ Please enter a vehicle number</div>';
+                return;
+            }
+
+            try {
+                document.getElementById('rto-result').innerHTML = 
+                    '<div class="result loading">🔄 Fetching RTO data...</div>';
+
+                const response = await fetch(`/api/rto/vehicle/${vehicleNumber}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const rto = data.rtoData;
+                    document.getElementById('rto-result').innerHTML = `
+                        <div class="result success">
+                            <h4>✅ RTO Verification Successful</h4>
+                            <div class="vehicle-card">
+                                <h5>Vehicle Details:</h5>
+                                <p><strong>Vehicle Number:</strong> ${rto.vehicleNumber}</p>
+                                <p><strong>Owner Name:</strong> ${rto.ownerName}</p>
+                                <p><strong>Make & Model:</strong> ${rto.makerModel}</p>
+                                <p><strong>Registration Date:</strong> ${rto.registrationDate}</p>
+                                <p><strong>Fuel Type:</strong> ${rto.fuelType}</p>
+                                <p><strong>Vehicle Class:</strong> ${rto.vehicleClass}</p>
+                                <p><strong>Registration Authority:</strong> ${rto.registrationAuthority}</p>
+                                <p><strong>Engine Number:</strong> ${rto.engineNumber}</p>
+                                <p><strong>Chassis Number:</strong> ${rto.chassisNumber}</p>
+                                <p><strong>Status:</strong> <span style="color: green;">${rto.status}</span></p>
+                                
+                                <h5>Validity Information:</h5>
+                                <p><strong>Fitness Valid Till:</strong> ${rto.fitnessUpto}</p>
+                                <p><strong>Insurance Valid Till:</strong> ${rto.insuranceUpto}</p>
+                                <p><strong>PUC Valid Till:</strong> ${rto.pucUpto}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('rto-result').innerHTML = 
+                        `<div class="result error">❌ ${data.message || 'RTO verification failed'}</div>`;
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('rto-result').innerHTML = 
+                    `<div class="result error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testDirectAPI() {
+            try {
+                document.getElementById('api-result').innerHTML = 
+                    '<div class="result loading">🔄 Testing API endpoints...</div>';
+
+                // Test multiple endpoints
+                const tests = [
+                    { vehicle: 'MH12AB1234', name: 'Valid Vehicle 1' },
+                    { vehicle: 'DL01CA9999', name: 'Valid Vehicle 2' },
+                    { vehicle: 'INVALID123', name: 'Invalid Vehicle' }
+                ];
+
+                let resultHTML = '<div class="result success"><h4>API Test Results:</h4>';
+
+                for (const test of tests) {
+                    try {
+                        const response = await fetch(`/api/rto/vehicle/${test.vehicle}`);
+                        const data = await response.json();
+                        
+                        resultHTML += `
+                            <div class="vehicle-card">
+                                <strong>${test.name} (${test.vehicle}):</strong> 
+                                ${data.success ? '✅ Success' : '❌ Failed'}
+                                ${data.success ? ` - Owner: ${data.rtoData.ownerName}` : ` - ${data.message}`}
+                            </div>
+                        `;
+                    } catch (error) {
+                        resultHTML += `
+                            <div class="vehicle-card">
+                                <strong>${test.name} (${test.vehicle}):</strong> ❌ Error - ${error.message}
+                            </div>
+                        `;
+                    }
+                }
+
+                resultHTML += '</div>';
+                document.getElementById('api-result').innerHTML = resultHTML;
+
+            } catch (error) {
+                document.getElementById('api-result').innerHTML = 
+                    `<div class="result error">❌ Test failed: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-load test on page load
+        window.addEventListener('load', () => {
+            setVehicleNumber('MH12AB1234');
+        });
+    </script>
+</body>
+</html>

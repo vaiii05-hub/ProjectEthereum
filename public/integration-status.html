@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Integration Status</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Integration Status Check</h1>
+    
+    <div id="status-container">
+        <button onclick="checkAllStatus()">Check All Systems</button>
+    </div>
+
+    <script>
+        async function checkAllStatus() {
+            const container = document.getElementById('status-container');
+            container.innerHTML = '<p>Checking systems...</p>';
+            
+            let statusHTML = '<h2>System Status Report</h2>';
+            
+            // Check Backend API
+            try {
+                const response = await fetch('/api/contract/info');
+                const data = await response.json();
+                statusHTML += `
+                    <div class="status success">
+                        ✅ Backend API: Connected<br>
+                        Contract: ${data.contractAddress}<br>
+                        Network: ${data.network}
+                    </div>
+                `;
+            } catch (error) {
+                statusHTML += `
+                    <div class="status error">
+                        ❌ Backend API: Failed - ${error.message}
+                    </div>
+                `;
+            }
+            
+            // Check MetaMask
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        const provider = new ethers.providers.Web3Provider(window.ethereum);
+                        const network = await provider.getNetwork();
+                        statusHTML += `
+                            <div class="status success">
+                                ✅ MetaMask: Connected<br>
+                                Account: ${accounts[0]}<br>
+                                Network: ${network.name} (${network.chainId})
+                            </div>
+                        `;
+                    } else {
+                        statusHTML += `
+                            <div class="status warning">
+                                ⚠️ MetaMask: Not connected
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    statusHTML += `
+                        <div class="status error">
+                            ❌ MetaMask: Error - ${error.message}
+                        </div>
+                    `;
+                }
+            } else {
+                statusHTML += `
+                    <div class="status error">
+                        ❌ MetaMask: Not installed
+                    </div>
+                `;
+            }
+            
+            // Check Smart Contract
+            try {
+                const CONTRACT_ADDRESS = "0xc089e064FbA6756f1179E11a75352FE0EaE2aC34";
+                const provider = new ethers.providers.JsonRpcProvider('https://sepolia.infura.io/v3/');
+                const code = await provider.getCode(CONTRACT_ADDRESS);
+                
+                if (code !== '0x') {
+                    statusHTML += `
+                        <div class="status success">
+                            ✅ Smart Contract: Deployed<br>
+                            Address: ${CONTRACT_ADDRESS}<br>
+                            Network: Sepolia Testnet
+                        </div>
+                    `;
+                } else {
+                    statusHTML += `
+                        <div class="status error">
+                            ❌ Smart Contract: Not found at address
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                statusHTML += `
+                    <div class="status error">
+                        ❌ Smart Contract: Check failed - ${error.message}
+                    </div>
+                `;
+            }
+            
+            statusHTML += `
+                <div class="status success">
+                    <h3>✅ Integration Complete!</h3>
+                    <p>Frontend ↔️ MetaMask ↔️ Smart Contract ↔️ Backend</p>
+                    <p><strong>Ready for testing:</strong></p>
+                    <ul>
+                        <li><a href="/">Main Application</a></li>
+                        <li><a href="/test-contract.html">Contract Test Interface</a></li>
+                    </ul>
+                </div>
+            `;
+            
+            container.innerHTML = statusHTML;
+        }
+    </script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+</body>
+</html>

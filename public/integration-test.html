@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTO + Blockchain Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 8px; }
+        button { padding: 8px 12px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        input { width: 200px; padding: 6px; margin: 3px; border: 1px solid #ccc; border-radius: 4px; }
+        .result { margin: 10px 0; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .comparison-table th, .comparison-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .comparison-table th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🔗 RTO + Blockchain Integration Test</h1>
+    
+    <div class="test-section">
+        <h3>Complete Vehicle Verification</h3>
+        <p>Tests both RTO and Blockchain verification simultaneously</p>
+        <input type="text" id="verifyVehicleNumber" placeholder="Vehicle Number" value="MH12AB1234">
+        <button onclick="testCompleteVerification()">Complete Verification</button>
+        <div id="complete-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Cross-Verification Analysis</h3>
+        <p>Compares RTO data with Blockchain data for discrepancies</p>
+        <input type="text" id="crossVerifyNumber" placeholder="Vehicle Number" value="TEST001">
+        <button onclick="testCrossVerification()">Cross Verify</button>
+        <div id="cross-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Complete Registration (RTO Validation + Blockchain)</h3>
+        <p>Validates with RTO first, then registers on blockchain</p>
+        <input type="text" id="regBuyerName" placeholder="Buyer Name" value="Test Buyer">
+        <input type="text" id="regBuyerId" placeholder="Buyer ID" value="TEST123">
+        <input type="text" id="regOwnerName" placeholder="Owner Name" value="Test Owner">
+        <input type="text" id="regVehicleNumber" placeholder="Vehicle Number" value="MH12AB1234">
+        <input type="password" id="regPrivateKey" placeholder="Private Key (for demo)">
+        <button onclick="testCompleteRegistration()">Complete Registration</button>
+        <div id="registration-result"></div>
+    </div>
+
+    <script>
+        async function testCompleteVerification() {
+            const vehicleNumber = document.getElementById('verifyVehicleNumber').value;
+            
+            try {
+                document.getElementById('complete-result').innerHTML = 
+                    '<div class="result info">🔄 Running complete verification...</div>';
+
+                const response = await fetch(`/api/verification/complete/${vehicleNumber}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const results = data.results;
+                    let html = `
+                        <div class="result ${results.overallStatus === 'verified' ? 'success' : 
+                                           results.overallStatus === 'partial' ? 'warning' : 'error'}">
+                            <h4>Complete Verification Results</h4>
+                            <p><strong>Overall Status:</strong> ${results.overallStatus.toUpperCase()}</p>
+                            
+                            <h5>🏛️ RTO Verification:</h5>
+                            <p>Status: ${results.rtoVerification.success ? '✅ Success' : '❌ Failed'}</p>
+                            ${results.rtoVerification.success ? 
+                                `<p>Owner: ${results.rtoVerification.data.ownerName}</p>
+                                 <p>Model: ${results.rtoVerification.data.makerModel}</p>` : 
+                                `<p>Error: ${results.rtoVerification.error}</p>`}
+                            
+                            <h5>⛓️ Blockchain Verification:</h5>
+                            <p>Status: ${results.blockchainVerification.success ? '✅ Success' : '❌ Failed'}</p>
+                            ${results.blockchainVerification.success ? 
+                                `<p>Buyer: ${results.blockchainVerification.data.buyerName}</p>
+                                 <p>Owner: ${results.blockchainVerification.data.ownerName}</p>` : 
+                                `<p>Error: ${results.blockchainVerification.error}</p>`}
+                        </div>
+                    `;
+                    document.getElementById('complete-result').innerHTML = html;
+                } else {
+                    document.getElementById('complete-result').innerHTML = 
+                        `<div class="result error">❌ Verification failed: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('complete-result').innerHTML = 
+                    `<div class="result error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function testCrossVerification() {
+            const vehicleNumber = document.getElementById('crossVerifyNumber').value;
+            
+            try {
+                document.getElementById('cross-result').innerHTML = 
+                    '<div class="result info">🔄 Running cross-verification analysis...</div>';
+
+                const response = await fetch(`/api/verification/cross-verify/${vehicleNumber}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const comparison = data.comparison;
+                    let html = `
+                        <div class="result ${comparison.dataMatch ? 'success' : 'warning'}">
+                            <h4>Cross-Verification Analysis</h4>
+                            <p><strong>Data Match:</strong> ${comparison.dataMatch ? '✅ Yes' : '⚠️ No'}</p>
+                            <p><strong>Recommendation:</strong> ${comparison.recommendation.toUpperCase()}</p>
+                            
+                            ${comparison.discrepancies.length > 0 ? 
+                                `<h5>⚠️ Discrepancies Found:</h5>
+                                 <ul>${comparison.discrepancies.map(d => `<li>${d}</li>`).join('')}</ul>` : 
+                                '<p>✅ No discrepancies found</p>'}
+                            
+                            <table class="comparison-table">
+                                <tr><th>Source</th><th>Status</th><th>Owner Name</th><th>Vehicle Number</th></tr>
+                                <tr>
+                                    <td>RTO</td>
+                                    <td>${data.verification.rtoVerification.success ? '✅' : '❌'}</td>
+                                    <td>${data.verification.rtoVerification.success ? data.verification.rtoVerification.data.ownerName : 'N/A'}</td>
+                                    <td>${data.verification.rtoVerification.success ? data.verification.rtoVerification.data.vehicleNumber : 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>Blockchain</td>
+                                    <td>${data.verification.blockchainVerification.success ? '✅' : '❌'}</td>
+                                    <td>${data.verification.blockchainVerification.success ? data.verification.blockchainVerification.data.ownerName : 'N/A'}</td>
+                                    <td>${data.verification.blockchainVerification.success ? data.verification.blockchainVerification.data.vehicleNumber : 'N/A'}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                    document.getElementById('cross-result').innerHTML = html;
+                } else {
+                    document.getElementById('cross-result').innerHTML = 
+                        `<div class="result error">❌ Cross-verification failed: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('cross-result').innerHTML = 
+                    `<div class="result error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function testCompleteRegistration() {
+            const buyerName = document.getElementById('regBuyerName').value;
+            const buyerId = document.getElementById('regBuyerId').value;
+            const ownerName = document.getElementById('regOwnerName').value;
+            const vehicleNumber = document.getElementById('regVehicleNumber').value;
+            const privateKey = document.getElementById('regPrivateKey').value;
+            
+            if (!privateKey) {
+                document.getElementById('registration-result').innerHTML = 
+                    '<div class="result error">❌ Private key required for blockchain registration</div>';
+                return;
+            }
+            
+            try {
+                document.getElementById('registration-result').innerHTML = 
+                    '<div class="result info">🔄 Running complete registration...</div>';
+
+                const response = await fetch('/api/verification/register-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ buyerName, buyerId, ownerName, vehicleNumber, privateKey })
+                });
+                
+                const data = await response.json();
+                const results = data.results;
+                
+                let html = `
+                    <div class="result ${data.success ? 'success' : 'error'}">
+                        <h4>Complete Registration Results</h4>
+                        <p><strong>Overall Status:</strong> ${results.overallStatus.toUpperCase()}</p>
+                        
+                        <h5>🏛️ RTO Validation:</h5>
+                        <p>Status: ${results.rtoRegistration.success ? '✅ Success' : '❌ Failed'}</p>
+                        <p>Message: ${results.rtoRegistration.message}</p>
+                        
+                        <h5>⛓️ Blockchain Registration:</h5>
+                        <p>Status: ${results.blockchainRegistration.success ? '✅ Success' : '❌ Failed'}</p>
+                        ${results.blockchainRegistration.success ? 
+                            `<p>Transaction Hash: ${results.blockchainRegistration.data.transactionHash}</p>
+                             <p>Block Number: ${results.blockchainRegistration.data.blockNumber}</p>` : 
+                            `<p>Error: ${results.blockchainRegistration.error}</p>`}
+                    </div>
+                `;
+                document.getElementById('registration-result').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('registration-result').innerHTML = 
+                    `<div class="result error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

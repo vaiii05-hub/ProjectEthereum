@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error Handling Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 8px; }
+        button { padding: 8px 12px; margin: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin: 10px 0; padding: 15px; border-radius: 4px; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Error Handling Test Suite</h1>
+    
+    <div class="test-section">
+        <h3>Input Validation Tests</h3>
+        <button onclick="testEmptyVehicleNumber()">Empty Vehicle Number</button>
+        <button onclick="testInvalidVehicleNumber()">Invalid Format</button>
+        <button onclick="testMissingFields()">Missing Registration Fields</button>
+        <div id="validation-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Service Timeout Tests</h3>
+        <button onclick="testRTOTimeout()">RTO Service Timeout</button>
+        <button onclick="testBlockchainTimeout()">Blockchain Timeout</button>
+        <div id="timeout-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Network Error Tests</h3>
+        <button onclick="testNetworkError()">Network Connectivity</button>
+        <button onclick="testInvalidEndpoint()">Invalid Endpoint</button>
+        <div id="network-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Blockchain Error Tests</h3>
+        <button onclick="testInvalidPrivateKey()">Invalid Private Key</button>
+        <button onclick="testInsufficientFunds()">Insufficient Funds</button>
+        <div id="blockchain-result"></div>
+    </div>
+
+    <script>
+        async function testEmptyVehicleNumber() {
+            try {
+                const response = await fetch('/api/verification/complete/');
+                const data = await response.json();
+                displayResult('validation-result', data, response.status);
+            } catch (error) {
+                displayResult('validation-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testInvalidVehicleNumber() {
+            try {
+                const response = await fetch('/api/verification/complete/XX');
+                const data = await response.json();
+                displayResult('validation-result', data, response.status);
+            } catch (error) {
+                displayResult('validation-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testMissingFields() {
+            try {
+                const response = await fetch('/api/verification/register-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ buyerName: 'Test' }) // Missing other fields
+                });
+                const data = await response.json();
+                displayResult('validation-result', data, response.status);
+            } catch (error) {
+                displayResult('validation-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testRTOTimeout() {
+            try {
+                // This will test the actual timeout handling in the service
+                const response = await fetch('/api/verification/complete/TIMEOUT_TEST');
+                const data = await response.json();
+                displayResult('timeout-result', data, response.status);
+            } catch (error) {
+                displayResult('timeout-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testBlockchainTimeout() {
+            try {
+                const response = await fetch('/api/verification/complete/BLOCKCHAIN_TIMEOUT');
+                const data = await response.json();
+                displayResult('timeout-result', data, response.status);
+            } catch (error) {
+                displayResult('timeout-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testNetworkError() {
+            try {
+                // Test with invalid base URL to simulate network error
+                const response = await fetch('/api/verification/complete/NETWORK_ERROR_TEST');
+                const data = await response.json();
+                displayResult('network-result', data, response.status);
+            } catch (error) {
+                displayResult('network-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testInvalidEndpoint() {
+            try {
+                const response = await fetch('/api/invalid-endpoint/test');
+                const data = await response.json();
+                displayResult('network-result', data, response.status);
+            } catch (error) {
+                displayResult('network-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testInvalidPrivateKey() {
+            try {
+                const response = await fetch('/api/verification/register-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        buyerName: 'Test',
+                        buyerId: 'TEST123',
+                        ownerName: 'Test Owner',
+                        vehicleNumber: 'MH12AB1234',
+                        privateKey: 'invalid_key'
+                    })
+                });
+                const data = await response.json();
+                displayResult('blockchain-result', data, response.status);
+            } catch (error) {
+                displayResult('blockchain-result', { error: error.message }, 500);
+            }
+        }
+
+        async function testInsufficientFunds() {
+            try {
+                const response = await fetch('/api/verification/register-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        buyerName: 'Test',
+                        buyerId: 'TEST123',
+                        ownerName: 'Test Owner',
+                        vehicleNumber: 'MH12AB1234',
+                        privateKey: '0x0000000000000000000000000000000000000000000000000000000000000001'
+                    })
+                });
+                const data = await response.json();
+                displayResult('blockchain-result', data, response.status);
+            } catch (error) {
+                displayResult('blockchain-result', { error: error.message }, 500);
+            }
+        }
+
+        function displayResult(elementId, data, status) {
+            const element = document.getElementById(elementId);
+            const resultClass = status >= 400 ? 'error' : status >= 200 && status < 300 ? 'success' : 'warning';
+            
+            element.innerHTML = `
+                <div class="result ${resultClass}">
+                    <h5>Response (Status: ${status}):</h5>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        // Auto-run basic validation test
+        window.addEventListener('load', () => {
+            document.getElementById('validation-result').innerHTML = 
+                '<div class="result warning">Click buttons above to test error handling scenarios</div>';
+        });
+    </script>
+</body>
+</html>
